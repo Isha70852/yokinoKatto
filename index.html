@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>雪音Katto — 純前端影音處理工具 · Wizard Forest Studio</title>
+  <meta name="description" content="雪音Katto：Wizard Forest Studio 的免費純前端影音處理工具，支援轉檔、壓縮、分割、說話標記與字幕，使用 GPU 加速，檔案不會上傳到伺服器。" />
+  <meta name="theme-color" content="#f7efe2" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1a0e07" media="(prefers-color-scheme: dark)" />
+  <script>
+    // 在樣式載入前決定淺色或深色，避免畫面閃一下
+    try {
+      const saved = localStorage.getItem('katto.theme');
+      const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      if (dark) document.documentElement.dataset.theme = 'dark';
+    } catch {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap"
+    rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+
+<body>
+  <div id="app">
+    <!-- Browser Check Banner -->
+    <div id="browser-check-banner" class="browser-check-banner hidden"></div>
+
+    <!-- TopBar -->
+    <header class="topbar" role="banner">
+      <div class="shell topbar-inner">
+        <div class="topbar-logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <rect width="28" height="28" rx="8" fill="url(#logoGrad)" />
+            <path d="M7 14 L14 7 L21 14 L14 21 Z" fill="white" opacity="0.9" />
+            <circle cx="14" cy="14" r="3" fill="white" />
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28">
+                <stop offset="0%" stop-color="#22616a" />
+                <stop offset="100%" stop-color="#3a8a91" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="topbar-title">雪音Katto</span>
+        </div>
+
+        <nav class="tab-nav" role="tablist" aria-label="功能選單">
+          <button class="tab-btn active" role="tab" data-tab="convert" id="tab-convert" aria-selected="true"
+            aria-controls="panel-convert">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2 8h12M10 4l4 4-4 4M6 12l-4-4 4-4" stroke="currentColor" stroke-width="1.5"
+                stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span data-i18n="tab.convert">轉檔</span>
+          </button>
+          <button class="tab-btn" role="tab" data-tab="compress" id="tab-compress" aria-selected="false"
+            aria-controls="panel-compress">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            <span data-i18n="tab.compress">壓縮</span>
+          </button>
+          <button class="tab-btn" role="tab" data-tab="split" id="tab-split" aria-selected="false"
+            aria-controls="panel-split">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 2v12M2 6h12M2 10h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            <span data-i18n="tab.split">分割</span>
+          </button>
+          <button class="tab-btn" role="tab" data-tab="speech" id="tab-speech" aria-selected="false"
+            aria-controls="panel-speech">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 13 11H7l-3 2.5V11H3a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 3 3z"
+                stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+              <path d="M5 7v0.5M7 5.5v3.5M9 6.2v2.1M11 7v0.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+            <span data-i18n="speech.title">說話標記</span>
+          </button>
+          <button class="tab-btn" role="tab" data-tab="subtitles" id="tab-subtitles" aria-selected="false"
+            aria-controls="panel-subtitles">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="1.5" y="3" width="13" height="10" rx="2" stroke="currentColor" stroke-width="1.5" />
+              <path d="M4.5 9.5h3M9.5 9.5h2M4.5 7h1.5M8 7h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+            <span data-i18n="subtitles.title">字幕</span>
+          </button>
+        </nav>
+
+        <div class="topbar-actions">
+
+          <a
+            href="https://github.com/Isha70852/yokinoKatto"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-ghost btn-sm topbar-blog-btn"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"
+       aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504
+                .5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703
+                -2.782.605-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463
+                -.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032
+                .892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338
+                -2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688
+                -.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026
+                A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337
+                c1.909-1.296 2.747-1.026 2.747-1.026.546 1.379.202 2.398.1 2.651
+                .64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943
+                .359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743
+                0 .267.18.578.688.48C19.138 20.2 22 16.447 22 12.021
+                22 6.484 17.522 2 12 2z"/>
+          </svg>
+            <span>github</span>
+          </a>
+          <button type="button" class="theme-toggle" id="theme-toggle" data-i18n-aria-label="theme.toggle"
+            aria-label="切換淺色／深色模式" title="切換淺色／深色模式">
+            <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+            <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            </svg>
+          </button>
+          <select id="lang-select" class="lang-select" aria-label="語言選擇">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="shell main-content" role="main">
+
+      <!-- DropZone -->
+      <section class="dropzone-section" aria-label="檔案上傳">
+        <div class="dropzone hero" id="dropzone" role="button" tabindex="0" aria-label="拖曳或點擊上傳媒體檔案">
+          <div class="dropzone-inner">
+            <div class="dropzone-icon" aria-hidden="true">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="22" fill="rgba(43,120,128,0.08)" stroke="rgba(43,120,128,0.25)"
+                  stroke-width="1.5" />
+                <path d="M24 32V20M18 26l6-6 6 6" stroke="url(#dropGrad)" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M16 34h16" stroke="url(#dropGrad)" stroke-width="2" stroke-linecap="round" />
+                <defs>
+                  <linearGradient id="dropGrad" x1="16" y1="20" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#22616a" />
+                    <stop offset="1" stop-color="#3a8a91" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <p class="dropzone-title" data-i18n="dropzone.title">拖曳媒體檔案到這裡</p>
+            <p class="dropzone-sub" data-i18n="dropzone.sub">或點擊選擇檔案 · 支援 MP4、WebM、MKV、MOV、MP3、WAV、FLAC 等</p>
+            <button class="btn btn-primary dropzone-btn" id="dropzone-btn" data-i18n="dropzone.btn">選擇檔案</button>
+          </div>
+          <input type="file" id="file-input" multiple
+            accept="video/*,audio/*,.mkv,.flac,.ts,.m4a,.m4v,.ogg,.opus" class="hidden"
+            aria-hidden="true" />
+        </div>
+      </section>
+
+      <!-- File List -->
+      <section class="file-list-section hidden" id="file-list-section" aria-label="已選擇的檔案">
+        <div class="file-list-header">
+          <h2 class="section-title" data-i18n="files.title">已選擇的檔案</h2>
+          <div class="file-list-actions">
+            <button class="btn btn-ghost btn-sm" id="clear-files-btn" data-i18n="files.clearAll">清除全部</button>
+          </div>
+        </div>
+        <div class="file-list" id="file-list" role="list" aria-label="檔案列表"></div>
+      </section>
+
+      <!-- Feature Panels -->
+      <div class="feature-panels">
+
+        <!-- Convert Panel -->
+        <section class="panel feature-panel active" id="panel-convert" role="tabpanel" aria-labelledby="tab-convert">
+          <h2 class="panel-title" data-i18n="convert.title">轉換格式</h2>
+          <div class="panel-body">
+            <div class="field">
+              <label class="field-label" for="convert-format" data-i18n="convert.outputFormat">輸出格式</label>
+              <div class="format-grid" id="convert-format-grid">
+                <!-- Filled by JS -->
+              </div>
+            </div>
+            <div class="panel-hint" id="convert-hint" aria-live="polite"></div>
+          </div>
+          <div class="panel-footer">
+            <button class="btn btn-primary btn-full" id="convert-start-btn" disabled
+              data-i18n="convert.start">開始轉換</button>
+          </div>
+        </section>
+
+        <!-- Compress Panel -->
+        <section class="panel feature-panel hidden" id="panel-compress" role="tabpanel" aria-labelledby="tab-compress">
+          <h2 class="panel-title" data-i18n="compress.title">壓縮設定</h2>
+          <div class="panel-body">
+            <!-- Resolution -->
+            <div class="field">
+              <label class="field-label" data-i18n="compress.resolution">輸出解析度</label>
+              <div class="preset-grid" id="resolution-grid">
+                <!-- Filled by JS -->
+              </div>
+              <div class="custom-resolution hidden" id="custom-resolution">
+                <div class="custom-res-inputs">
+                  <input type="number" id="custom-width" class="custom-input" placeholder="寬 (px)" min="1" max="7680"
+                    aria-label="自訂寬度" />
+                  <span class="res-separator">×</span>
+                  <input type="number" id="custom-height" class="custom-input" placeholder="高 (px)" min="1" max="4320"
+                    aria-label="自訂高度" />
+                </div>
+              </div>
+            </div>
+            <!-- Bitrate -->
+            <div class="field">
+              <label class="field-label" data-i18n="compress.bitrate">視訊品質</label>
+              <div class="preset-grid" id="bitrate-grid">
+                <!-- Filled by JS -->
+              </div>
+              <div class="custom-bitrate hidden" id="custom-bitrate">
+                <div class="custom-res-inputs">
+                  <input type="number" id="custom-bitrate-val" class="custom-input" placeholder="數值" min="1"
+                    aria-label="自訂 bitrate 數值" />
+                  <select id="custom-bitrate-unit" class="custom-select" aria-label="Bitrate 單位">
+                    <option value="kbps">kbps</option>
+                    <option value="mbps" selected>Mbps</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <!-- Audio Bitrate -->
+            <div class="field">
+              <label class="field-label" data-i18n="compress.audioBitrate">音訊 Bitrate</label>
+              <div class="preset-grid" id="audio-bitrate-grid">
+                <!-- Filled by JS -->
+              </div>
+            </div>
+            <!-- Estimated size -->
+            <div class="estimate-card" id="estimate-card">
+              <div class="estimate-row">
+                <span data-i18n="compress.estimatedSize">預估輸出大小</span>
+                <span class="estimate-value" id="estimate-size">—</span>
+              </div>
+              <div class="estimate-row">
+                <span data-i18n="compress.originalSize">原始大小</span>
+                <span class="estimate-value" id="original-size">—</span>
+              </div>
+            </div>
+            <!-- GPU -->
+            <div class="field field-row">
+              <label class="toggle-label" for="gpu-toggle">
+                <span data-i18n="compress.gpuAccel">GPU 硬體加速</span>
+                <span class="toggle-hint" data-i18n="compress.gpuHint">若可用則優先使用 GPU 編碼</span>
+              </label>
+              <div class="toggle-wrap">
+                <input type="checkbox" id="gpu-toggle" class="toggle-input" checked role="switch" aria-checked="true" />
+                <label for="gpu-toggle" class="toggle-thumb" aria-hidden="true"></label>
+              </div>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <button class="btn btn-primary btn-full" id="compress-start-btn" disabled
+              data-i18n="compress.start">開始壓縮</button>
+          </div>
+        </section>
+
+        <!-- Split Panel -->
+        <section class="panel feature-panel hidden" id="panel-split" role="tabpanel" aria-labelledby="tab-split">
+          <h2 class="panel-title" data-i18n="split.title">分割影片</h2>
+          <div class="panel-body">
+            <!-- Preview area -->
+            <div class="split-preview-wrap" id="split-preview-wrap">
+              <div class="split-preview-placeholder" id="split-preview-placeholder">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                  <rect width="40" height="40" rx="10" fill="rgba(43,120,128,0.1)" />
+                  <path d="M15 13l12 7-12 7V13z" fill="rgba(43,120,128,0.45)" />
+                </svg>
+                <p data-i18n="split.selectFile">請先選擇影片檔案</p>
+              </div>
+              <video id="split-video" class="split-video hidden" controls preload="metadata"
+                aria-label="分割預覽影片"></video>
+            </div>
+            <!-- Timeline -->
+            <div class="timeline-wrap hidden" id="timeline-wrap" aria-label="時間軸">
+              <div class="timeline-bar" id="timeline-bar" role="slider" aria-label="時間軸" aria-valuemin="0"
+                aria-valuemax="100">
+                <div class="timeline-played" id="timeline-played"></div>
+                <div class="timeline-segments" id="timeline-segments"></div>
+                <div class="timeline-handle start-handle" id="start-handle" role="slider" aria-label="起始點" tabindex="0">
+                </div>
+                <div class="timeline-handle end-handle" id="end-handle" role="slider" aria-label="結束點" tabindex="0">
+                </div>
+              </div>
+              <div class="timeline-times">
+                <span id="tl-current-time">0:00.000</span>
+                <span id="tl-duration">0:00.000</span>
+              </div>
+            </div>
+            <!-- Segments -->
+            <div class="split-segments" id="split-segments">
+              <!-- Filled by JS -->
+            </div>
+            <!-- Add segment button -->
+            <button class="btn btn-ghost btn-sm hidden" id="add-segment-btn" data-i18n="split.addSegment">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+              新增分割點
+            </button>
+          </div>
+          <div class="panel-footer">
+            <label class="field-label" for="split-output-format" data-i18n="convert.outputFormat"></label>
+            <select id="split-output-format"><option value="" data-i18n="speech.original">維持原格式</option></select>
+            <button class="btn btn-primary btn-full" id="split-start-btn" disabled data-i18n="split.start">開始分割</button>
+          </div>
+        </section>
+
+        <section class="panel feature-panel hidden" id="panel-speech" role="tabpanel" aria-labelledby="tab-speech">
+          <h2 class="panel-title" data-i18n="speech.title"></h2>
+          <div class="panel-body">
+            <label class="field-label" for="speech-file" data-i18n="speech.source"></label><select id="speech-file"></select>
+            <div class="speech-toolbar">
+              <label for="speech-speaker" data-i18n="speech.speaker"></label><select id="speech-speaker"></select>
+              <input id="speech-name" type="text" maxlength="80" aria-label="Speaker name">
+              <button class="btn btn-ghost btn-sm" id="speech-add" data-i18n="speech.add"></button>
+              <button class="btn btn-ghost btn-sm" id="speech-rename" data-i18n="speech.rename"></button>
+              <button class="btn btn-ghost btn-sm" id="speech-delete" data-i18n="speech.delete"></button>
+            </div>
+            <div id="speech-labels" class="speech-toolbar"></div>
+            <div class="speech-toolbar"><label for="speech-label-name" data-i18n="speech.customLabel"></label><input id="speech-label-name" type="text" maxlength="80"><button class="btn btn-ghost btn-sm" id="speech-label-add" data-i18n="speech.addLabel"></button></div>
+            <div class="annotation-preview" id="speech-preview"><video id="speech-video" controls preload="metadata" playsinline></video>
+            <div class="preview-dock"><span id="speech-time">0:00.000 / 0:00.000</span><div id="speech-range-editor" class="hidden"></div></div>
+            <input id="speech-seek" type="range" min="0" max="0" step="0.001" value="0" aria-label="Seek">
+            <div id="speech-timeline"></div></div>
+            <div class="speech-toolbar"><label for="speech-preview-mode" data-i18n="speech.previewMode"></label><select id="speech-preview-mode"><option value="loop" data-i18n="speech.loop"></option><option value="continuous" data-i18n="speech.continuous"></option></select></div>
+            <div class="speech-toolbar">
+              <button class="btn btn-ghost" id="speech-play" data-i18n="speech.play"></button>
+              <button class="btn btn-ghost" id="speech-start" data-i18n="speech.start"></button>
+              <button class="btn btn-ghost" id="speech-end" data-i18n="speech.end"></button>
+              <span id="speech-pending" aria-live="polite"></span>
+            </div>
+            <p class="panel-hint" data-i18n="speech.keys"></p>
+            <h3 data-i18n="speech.segments"></h3>
+            <div class="speech-toolbar"><button class="btn btn-ghost btn-sm" id="speech-select-all" data-i18n="speech.selectAll"></button><button class="btn btn-ghost btn-sm" id="speech-select-none" data-i18n="speech.selectNone"></button><button class="btn btn-ghost btn-sm" id="speech-delete-selected" data-i18n="speech.deleteSelected" disabled></button><span id="speech-selected-count"></span></div>
+            <div id="speech-segments"></div>
+          </div>
+          <div class="panel-footer">
+            <div class="speech-toolbar">
+              <label for="speech-format" data-i18n="convert.outputFormat"></label><select id="speech-format"></select>
+              <label for="speech-mode" data-i18n="speech.mode"></label><select id="speech-mode"><option value="separate" data-i18n="speech.separate"></option><option value="merge" data-i18n="speech.merge"></option></select>
+              <button class="btn btn-primary" id="speech-export" disabled data-i18n="speech.export"></button>
+            </div>
+            <p class="panel-hint" data-i18n="speech.zipHint"></p>
+          </div>
+        </section>
+        <section class="panel feature-panel hidden" id="panel-subtitles" role="tabpanel" aria-labelledby="tab-subtitles">
+          <h2 class="panel-title" data-i18n="subtitles.title"></h2>
+          <div class="panel-body">
+            <label class="field-label" for="subtitles-file" data-i18n="speech.source"></label><select id="subtitles-file"></select>
+            <div class="speech-toolbar"><label for="subtitles-txt" data-i18n="subtitles.import"></label><input id="subtitles-txt" type="file" accept=".txt,text/plain"></div>
+            <label class="field-label" for="subtitles-text" data-i18n="subtitles.paste"></label><textarea id="subtitles-text" rows="5"></textarea>
+            <button class="btn btn-ghost" id="subtitles-import" data-i18n="subtitles.load"></button>
+            <div class="annotation-preview" id="subtitles-preview"><video id="subtitles-video" controls preload="metadata" playsinline></video>
+            <div class="preview-dock"><span id="subtitles-time"></span><p id="subtitles-current" aria-live="polite"></p><div id="subtitles-range-editor" class="hidden"></div></div><input id="subtitles-seek" type="range" min="0" max="0" value="0" step="0.001" data-i18n-aria-label="subtitles.seek"></div>
+            <div class="speech-toolbar"><button class="btn btn-ghost" id="subtitles-play" data-i18n="speech.play"></button><button class="btn btn-ghost" id="subtitles-start" data-i18n="subtitles.start"></button><button class="btn btn-ghost" id="subtitles-end" data-i18n="subtitles.end"></button><button class="btn btn-ghost" id="subtitles-next" data-i18n="subtitles.quick"></button></div>
+            <div class="speech-toolbar"><label for="subtitles-preview-mode" data-i18n="speech.previewMode"></label><select id="subtitles-preview-mode"><option value="loop" data-i18n="speech.loop"></option><option value="continuous" data-i18n="speech.continuous"></option></select></div><p data-i18n="subtitles.keys" class="panel-hint"></p>
+            <div id="subtitles-list"></div>
+          </div>
+          <div class="panel-footer"><button class="btn btn-primary" id="subtitles-export" data-i18n="subtitles.export" disabled></button></div>
+        </section>
+
+      </div>
+
+      <!-- Job Queue -->
+      <section class="job-queue-section" id="job-queue-section" aria-label="任務佇列">
+        <div class="section-title-row">
+          <h2 class="section-title" data-i18n="queue.title">處理佇列</h2>
+          <button class="btn btn-ghost btn-sm hidden" id="clear-done-btn" data-i18n="queue.clearDone">清除已完成</button>
+        </div>
+        <div class="job-list" id="job-list" role="list" aria-label="任務列表" aria-live="polite"></div>
+        <div class="job-empty" id="job-empty">
+          <p data-i18n="queue.empty">尚無任務</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <p class="footer-note" data-i18n="footer.note">所有檔案都在你的瀏覽器裡處理，不會上傳到任何伺服器。</p>
+        <p class="footer-brand"><span class="footer-mark"><img src="/katto-icon.webp" alt="雪音Katto" width="40" height="40" /><b>Wizard Forest Studio</b></span><span>© <span id="footer-year">2026</span> Wizard Forest Studio</span></p>
+      </div>
+    </footer>
+
+    <!-- Preview Modal -->
+    <div class="modal-overlay hidden" id="preview-modal" role="dialog" aria-modal="true"
+      aria-labelledby="preview-modal-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title" id="preview-modal-title" data-i18n="preview.title">預覽</h3>
+          <button class="modal-close" id="preview-modal-close" aria-label="關閉預覽">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <video id="preview-video" class="preview-video" controls preload="metadata" aria-label="媒體預覽"></video>
+          <div class="preview-meta" id="preview-meta"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
